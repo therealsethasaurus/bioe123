@@ -1,0 +1,83 @@
+/**
+* Note: We are writing this code, assuming that the sensor subsystem code is
+* separate. We are also assuming that the sensor subsystem code correctly 
+* outputs the current speed of the centrifuge. And that this speed update is
+* live.
+*/
+
+int outputPin = 5;
+
+int frequency; // output from the sensor subsystem 
+
+// parameters to be specified by the user
+int desiredSpeed;
+int desiredDuration;
+
+int startTime;
+int prevTime;
+
+// parameters for the PID controller
+// we may choose to not use all 3 components, 
+// and if so, we will just set those parameters to 0
+int Kp = 1;
+int Ki = 1;
+int Kd = 1;
+
+// running values for the PID controller
+int prevError = 0;
+int integral = 0;
+
+bool spinning = false;
+
+/**
+* Use PID controller to determine how much to change the speed
+*/ 
+float pidController(currentSpeed, desiredSpeed, dt) {
+	float e = currentSpeed - desiredSpeed;
+	i = integral + e * dt;
+	float d = (e - prevError) / dt;
+	out = Kp * e + Ki * i + Kd * d;
+	prevError = e;
+	return out;
+}
+
+/**
+* Calculate the new duty cycle given the output from the PID controller
+* and the current dutyCycle
+*/
+int dutyCycle(out, currDuty) {
+	calculate the new duty cycle
+	return newDuty;
+}
+
+void setup() {
+	
+}
+
+void loop () {
+	// if the centrifuge is not spinning yet, ask the user for their desired values
+	if !spinning {
+		get desired speed from user
+		get desired duration from user
+		if onSwitchPressed {
+			spinning = true;
+			startTime = millis();
+			prevTime = startTime;
+		}
+		continue;
+
+	int currTime = millis;
+
+	// if time is up, stop the centrifuge
+	if (currTime > startTime) {
+		digitalWrite(outputPin, 0);
+		continue;	
+}
+
+	// maintain the user's desired speed
+	currSpeed = output from sensor subsytem;
+	float control = pidController(currSpeed, desiredSpeed, currTime - prevTime);
+	currDuty = dutyCycle(control, currDuty);
+digitalWrite(outputPin, currDuty);
+prevTime = currTime;
+}
