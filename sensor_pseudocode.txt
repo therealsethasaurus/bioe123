@@ -1,0 +1,35 @@
+
+// specify the different pins that we will be using
+input_pin = 2; // intercept pin
+
+// count the number of half spins
+volatile int half_spin_count = 0;
+volatile int prev_half_spin_count = 0;
+
+float rpm = 0;
+
+unsigned long prevMillis = 0;
+
+/**
+ISR: Record when the button is pressed
+*/
+void signal_change () {
+	spin_count++;
+}
+
+void setup() {
+	attachInterrupt(digitalPinToInterrupt(input_pin), signal_change, RISING);
+	
+	Serial.begin(9600);
+}
+
+void loop () {
+	unsigned long currMillis = millis();
+	int diff = half_spin_count - prev_half_spin_count;
+	if (diff) {
+		float freq = 1000 * diff / (currMillis - prevMillis);
+		rpm = freq * 60;
+		prevMillis = currMillis;
+	}
+	Serial.println(rpm);
+}
