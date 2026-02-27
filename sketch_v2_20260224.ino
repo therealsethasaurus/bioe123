@@ -10,10 +10,10 @@ int motorGatePin = 5;
 
 // define variables
 // analog input + pwm variables
-int dutyCycle = 0;  // duty cycle to send to mosfet to run motor (PWM)
-int dutyCycleSS = 100;
+unsigned int dutyCycle = 0;  // duty cycle to send to mosfet to run motor (PWM)
+unsigned int dutyCycleSS = 100;
 
-unsigned long currRPM;
+long currRPM;
 
 // parameters to be specified by the user
 float desiredSpeed = 2500;    // default is 2500 rpm
@@ -26,9 +26,9 @@ unsigned long prevDisplayUpdate = 0;
 // parameters for the PID controller
 // we may choose to not use all 3 components,
 // and if so, we will just set those parameters to 0
-int Kp = 2;
-int Ki = 1;
-int Kd = 1;
+int Kp = 1;
+int Ki = 0;
+int Kd = 0;
 
 // running values for the PID controller
 int prevError = 0;
@@ -62,17 +62,13 @@ int pidController(int currentSpeed, int desiredSpeed, int dt) {
   int out = Kp * e + Ki * integral + Kd * d;
   prevError = e;
 
-  Serial.println((String) "Error: " + e);
-  Serial.println((String) "Derivative: " + d);
-  Serial.println((String) "Integral " + integral);
-  Serial.println((String) "Sum: " + out);
   return out;
 }
 
 
 void setup() {
   attachInterrupt(digitalPinToInterrupt(inputPin), signalChange, RISING);
-  digitalWrite(motorGatePin, 0);
+  analogWrite(motorGatePin, 0);
 
   Serial.begin(9600);
 
@@ -120,15 +116,15 @@ void loop() {
 
     // calcuate change in spin counts since last iteration
     unsigned long spinCountDelta = halfSpinCount - prevCount;
-    Serial.println((String) "count " + halfSpinCount);
+    // Serial.println((String) "count " + halfSpinCount);
     unsigned long currTime = millis();
 
     // Serial.println((String) "halfSpin count" + halfSpinCount);
     // if spin count has changed, recalculate the speed and control values
     if (spinCountDelta > 0) {
+    // if (currTime - prevMillis > 20) {
       // calculate the centrfiuges speed
       unsigned long freq = (1000 * spinCountDelta) / (currTime - prevMillis);
-      Serial.println(currTime - prevMillis);
       freq = freq / 2;
       currRPM = freq * 60;
       Serial.println((String) "Current RPM" + currRPM);
@@ -138,11 +134,24 @@ void loop() {
       int control = pidController(currRPM, desiredSpeed, dt);
 
       // Serial.println((String) "Value from controller" + control);
-      dutyCycle = control / 2 + dutyCycleSS;  // add the dutyCycleSS as a baseline guess for what the duty cycle will be
-      dutyCycle = min(dutyCycle, 255);
-      dutyCycle = max(0, dutyCycle);
-      digitalWrite(motorGatePin, dutyCycle);
-      Serial.println((String) "new duty cycle" + dutyCycle);
+      // dutyCycle = control / 2 + dutyCycleSS;  // add the dutyCycleSS as a baseline guess for what the duty cycle will be
+      // dutyCycle = min(dutyCycle, 255);
+      // dutyCycle = max(0, dutyCycle);
+      Serial.println((String) "control " + control);
+
+      if (control / 2 > 155) {
+        dutyCycle = 255;
+      } else if (control / 2 < -100 ) {
+        dutyCycle = 0;
+      } else {
+        dutyCycle = control / 2 + dutyCycleSS;
+      }
+
+      // int dutyCycleInt = control / 2 + dutyCycle;
+      // dutyCycleInt = min(dutyCycle, 255);
+      // dutyCycleInt = max(0, dutyCycle);
+      // dutyCycle = dutyCycleInt;
+      analogWrite(motorGatePin, dutyCycle);
 
       // update the clock
       prevMillis = currTime;
@@ -150,8 +159,8 @@ void loop() {
     }
 
     // if time is up, stop the centrifuge
-    if ((currTime - startTime) > desiredDuration * 1000) {
-      digitalWrite(motorGatePin, 0);
+    if ((currTime - startTime) > desiredDuration * 1000 + 2000) {
+      analogWrite(motorGatePin, 0);
       spinning = false;
       Serial.println("Centrifuge is slowing down");
     }
@@ -163,13 +172,13 @@ void loop() {
       // if user types in an 's' while the centrifuge is spinning, emergency stop!
       if (userInput == 's') {
         spinning = false;
-        digitalWrite(motorGatePin, 0);
+        analogWrite(motorGatePin, 0);
         Serial.println("Emergency stopping procedure has been activated");
       }
     }
   } else {
     // centrifuge should not be spinning -> dutyCycle = 0;
-    digitalWrite(motorGatePin, 0);
+    analogWrite(motorGatePin, 0);
     unsigned long currTime = millis();
 
     if (currRPM < 10000) {
