@@ -1,2 +1,2 @@
 # bioe123
-code for bioe123 class projects
+Seth and Kasey's code for bioe123 class projects
