@@ -85,12 +85,13 @@ void setup() {
   delay(1000);
 
   Serial.println("Please enter desired duration (in seconds) (hint 60secs=1min): ");
-  delay(1000);
   while (Serial.available() == 0) {
     // do nothing until use enters duration
   }
   desiredDuration = Serial.parseInt();
   Serial.println((String) "desired duration is " + desiredDuration);
+  
+  delay(1000);
 
   Serial.println("Start spinning? (y/n)");
   delay(1000);
@@ -181,7 +182,7 @@ void loop() {
     analogWrite(motorGatePin, 0);
     unsigned long currTime = millis();
 
-    if (currRPM < 10000) {
+    if (currRPM < 100) {
       Serial.println("Centrifuge is done spinning - you may collect your samples now!");
       delay(1000);
     } else {
