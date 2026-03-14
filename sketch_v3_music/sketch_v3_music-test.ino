@@ -11,13 +11,13 @@ int motorGatePin = 5;
 // define variables
 // analog input + pwm variables
 unsigned int dutyCycle = 0;  // duty cycle to send to mosfet to run motor (PWM)
-unsigned int dutyCycleSS = 100;
+int dutyCycleSS = 100;
 
 long currRPM;
 
 // parameters to be specified by the user
-float desiredSpeed = 2500;    // default is 2500 rpm
-float desiredDuration = 120;  // default is 2 minutes (120 seconds)
+int desiredSpeed = 2500;    // default is 2500 rpm
+unsigned long desiredDuration = 60;  // default is 2 minutes (120 seconds)
 
 unsigned long startTime = 0;
 unsigned long prevTime;
@@ -75,10 +75,32 @@ void setup() {
   while (!Serial)
     ;  // wait for serial monitor to finish loading
 
+  
+  while (Serial.available() == 0) {
+    // do nothing until signal from python
+  }
+
+  char c = Serial.parseInt();
+  if (c != 1) {
+    Serial.println("Aborting - no python signal");
+    exit(1);
+  }
+  Serial.println("Successfully connected to the code");
+
+  // char c = Serial.read();
+  // Serial.println(c);
+
+  // if (c != 1) {
+  //   Serial.println("aborting");
+  //   exit(1);
+  // }
+
   Serial.println("Please enter desired motor speed (in RPM) ");
+
   while (Serial.available() == 0) {
     // do nothing
   }
+
   desiredSpeed = Serial.parseInt();
   Serial.println((String) "desired speed is " + desiredSpeed);
 
@@ -93,7 +115,7 @@ void setup() {
   
   delay(1000);
 
-  Serial.println("Start spinning? (y/n)");
+  Serial.println("Start spinning? (enter y/n)");
   delay(1000);
 
   while (Serial.read() != 'y') {
@@ -152,7 +174,7 @@ void loop() {
       // dutyCycleInt = min(dutyCycle, 255);
       // dutyCycleInt = max(0, dutyCycle);
       // dutyCycle = dutyCycleInt;
-      analogWrite(motorGatePin, dutyCycle);
+      digitalWrite(motorGatePin, dutyCycle);
 
       // update the clock
       prevMillis = currTime;
@@ -160,8 +182,8 @@ void loop() {
     }
 
     // if time is up, stop the centrifuge
-    if ((currTime - startTime) > desiredDuration * 1000 + 2000) {
-      analogWrite(motorGatePin, 0);
+    if ((currTime - startTime) > desiredDuration * 1000) {
+      digitalWrite(motorGatePin, 0);
       spinning = false;
       Serial.println("Centrifuge is slowing down");
     }
@@ -173,13 +195,13 @@ void loop() {
       // if user types in an 's' while the centrifuge is spinning, emergency stop!
       if (userInput == 's') {
         spinning = false;
-        analogWrite(motorGatePin, 0);
+        digitalWrite(motorGatePin, 0);
         Serial.println("Emergency stopping procedure has been activated");
       }
     }
   } else {
     // centrifuge should not be spinning -> dutyCycle = 0;
-    analogWrite(motorGatePin, 0);
+    digitalWrite(motorGatePin, 0);
     unsigned long currTime = millis();
 
     if (currRPM < 100) {
@@ -193,7 +215,6 @@ void loop() {
 
         // calculate the centrfiuges speed
         unsigned long freq = (1000 * spinCountDelta) / (currTime - prevMillis);
-        Serial.println(currTime - prevMillis);
         freq = freq;
         currRPM = freq * 60;
 
@@ -201,7 +222,7 @@ void loop() {
         prevMillis = currTime;
         prevCount = halfSpinCount;
 
-        Serial.println((String) "Protocol over: Current RPM" + currRPM + " Do not remove samples yet");
+        Serial.println((String) "Protocol over: Current RPM Do not remove samples yet");
       }
     }
   }
