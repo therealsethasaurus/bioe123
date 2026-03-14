@@ -1,3 +1,7 @@
+"""
+All the music related utility functions that we used in our V3 centrifuge.
+"""
+
 import numpy as np
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -12,7 +16,6 @@ def get_all_playlist_tracks(sp, playlist_id='6JFBHiU8hdd0xAhZ9ZyQMR'):
     results = sp.playlist_tracks(playlist_id)
     tracks.extend(results['items'])
 
-    # Handle pagination
     while results['next']:
         results = sp.next(results)
         tracks.extend(results['items'])
@@ -24,10 +27,9 @@ def choose_track(values, tracks):
     """
     Returns the ID for the track that is closest in duration to the desired 
     centrifuge duration specified by the user. When there are songs of equal distance, 
+    returns a random song.
     """
-    desired_speed = values[0]
     desired_duration = values[1]
-    # tracks = get_all_playlist_tracks(sp, playlist_id)
 
     min_dist = float('inf')
     track = ''
@@ -48,19 +50,20 @@ def choose_track(values, tracks):
 
     return track
 
-def set_volume(sp, values):
+
+def set_volume(sp, values, max_speed=1800, min_speed=0):
     """
-    Chooses the volume of the song, based on the speed of centrifugation
+    Chooses the volume of the song, based on a speed of centrifugation.
     """
     desired_speed = values[0]
-    desired_speed = min(desired_speed, 1500)
-    desired_speed = max(desired_speed, 0)
+    desired_speed = min(desired_speed, max_speed)
+    desired_speed = max(desired_speed, min_speed)
 
-    volume = (desired_speed / 1500) * 100
+    volume = (desired_speed / max_speed) * 100
 
-    print(desired_speed)
-
-    print(volume)
+    # for trace matrix verification tests
+    # print(desired_speed)
+    # print(volume)
 
     sp.volume(int(volume))
 
@@ -88,9 +91,9 @@ def get_curr_info(sp):
         print(data['id'])
 
         return data
-
     
     return None
+
 
 def resume_prev_song(sp, data):
     """Resumes the song specified in data. See `get_curr_info` for the format

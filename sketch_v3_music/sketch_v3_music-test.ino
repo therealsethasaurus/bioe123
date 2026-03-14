@@ -1,9 +1,10 @@
-// This code is test code for the BioE 123 Centrifuge V2 Prototype
+// This code is test code for the BioE 123 Centrifuge V3
 //
-// Key elements:
+// For the most part, this code is the same as the V2 centrifuge code.
+// However, now it starts by checking if it received an input from Python
+// to signal that everything has started before prompting the user to enter input.
 //
-//
-//  Seth Kohno and Kasey Lassen; 20260224
+//  Seth Kohno and Kasey Lassen; 20260312
 
 // define constants and pins
 int motorGatePin = 5;
@@ -16,25 +17,25 @@ int dutyCycleSS = 100;
 long currRPM;
 
 // parameters to be specified by the user
-int desiredSpeed = 2500;    // default is 2500 rpm
-unsigned long desiredDuration = 60;  // default is 2 minutes (120 seconds)
+int desiredSpeed;
+unsigned long desiredDuration; 
 
 unsigned long startTime = 0;
 unsigned long prevTime;
 unsigned long prevDisplayUpdate = 0;
 
 // parameters for the PID controller
-// we may choose to not use all 3 components,
-// and if so, we will just set those parameters to 0
-int Kp = 1;
-int Ki = 0;
-int Kd = 0;
+float Kp = 0.3;
+float Ki = 0;
+float Kd = 0;
 
 // running values for the PID controller
 int prevError = 0;
 int integral = 0;
 
 bool spinning = false;  // indicator for the state of the centrifuge
+
+int stop_speed = 100;
 
 // declare intercept pin - this is pin d2, not the pd2 [int 2] one!
 const byte inputPin = 2;  // intercept pin
@@ -76,30 +77,19 @@ void setup() {
     ;  // wait for serial monitor to finish loading
 
   
-  while (Serial.available() == 0) {
-    // do nothing until signal from python
-  }
+  while (Serial.available() == 0);
 
+  // confirm connection with pyserial
   char c = Serial.parseInt();
   if (c != 1) {
-    Serial.println("Aborting - no python signal");
+    Serial.println("Aborting. Incorrect signal - cannot confirm connection with Pyserial.");
     exit(1);
   }
   Serial.println("Successfully connected to the code");
 
-  // char c = Serial.read();
-  // Serial.println(c);
-
-  // if (c != 1) {
-  //   Serial.println("aborting");
-  //   exit(1);
-  // }
-
   Serial.println("Please enter desired motor speed (in RPM) ");
 
-  while (Serial.available() == 0) {
-    // do nothing
-  }
+  while (Serial.available() == 0);
 
   desiredSpeed = Serial.parseInt();
   Serial.println((String) "desired speed is " + desiredSpeed);
@@ -107,9 +97,8 @@ void setup() {
   delay(1000);
 
   Serial.println("Please enter desired duration (in seconds) (hint 60secs=1min): ");
-  while (Serial.available() == 0) {
-    // do nothing until use enters duration
-  }
+  while (Serial.available() == 0);
+
   desiredDuration = Serial.parseInt();
   Serial.println((String) "desired duration is " + desiredDuration);
   
@@ -119,6 +108,7 @@ void setup() {
   delay(1000);
 
   while (Serial.read() != 'y') {
+    // tell the user that they messed up :)
     Serial.println("try again :(");
     delay(1000);
   }
@@ -128,24 +118,20 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   if (spinning) {
-    // Serial.println("Centrifuge is now spinning");
     // set the start time
-    if (startTime == 0) {  // used to be -1, but this would be weird with unsigned type
+    if (startTime == 0) {  // used to be -1, but unsignged, and assumed edge case of millis being 0 is so rare
       startTime = millis();
       prevDisplayUpdate = startTime;
     }
 
     // calcuate change in spin counts since last iteration
     unsigned long spinCountDelta = halfSpinCount - prevCount;
-    // Serial.println((String) "count " + halfSpinCount);
     unsigned long currTime = millis();
 
-    // Serial.println((String) "halfSpin count" + halfSpinCount);
     // if spin count has changed, recalculate the speed and control values
+    // experimented with other values here in V2, but for V3, 0 seemed to work well enough :)
     if (spinCountDelta > 0) {
-    // if (currTime - prevMillis > 20) {
       // calculate the centrfiuges speed
       unsigned long freq = (1000 * spinCountDelta) / (currTime - prevMillis);
       freq = freq / 2;
@@ -156,25 +142,15 @@ void loop() {
       int dt = currTime - prevMillis;
       int control = pidController(currRPM, desiredSpeed, dt);
 
-      // Serial.println((String) "Value from controller" + control);
-      // dutyCycle = control / 2 + dutyCycleSS;  // add the dutyCycleSS as a baseline guess for what the duty cycle will be
-      // dutyCycle = min(dutyCycle, 255);
-      // dutyCycle = max(0, dutyCycle);
-      Serial.println((String) "control " + control);
-
-      if (control / 2 > 155) {
+      if (control > 155) {
         dutyCycle = 255;
-      } else if (control / 2 < -100 ) {
+      } else if (control < -100 ) {
         dutyCycle = 0;
       } else {
-        dutyCycle = control / 2 + dutyCycleSS;
+        dutyCycle = control + dutyCycleSS;
       }
 
-      // int dutyCycleInt = control / 2 + dutyCycle;
-      // dutyCycleInt = min(dutyCycle, 255);
-      // dutyCycleInt = max(0, dutyCycle);
-      // dutyCycle = dutyCycleInt;
-      digitalWrite(motorGatePin, dutyCycle);
+      analogWrite(motorGatePin, dutyCycle);
 
       // update the clock
       prevMillis = currTime;
@@ -204,7 +180,7 @@ void loop() {
     digitalWrite(motorGatePin, 0);
     unsigned long currTime = millis();
 
-    if (currRPM < 100) {
+    if (currRPM < stop_speed) {
       Serial.println("Centrifuge is done spinning - you may collect your samples now!");
       delay(1000);
     } else {
@@ -222,7 +198,7 @@ void loop() {
         prevMillis = currTime;
         prevCount = halfSpinCount;
 
-        Serial.println((String) "Protocol over: Current RPM Do not remove samples yet");
+        Serial.println("Protocol over: Current RPM Do not remove samples yet");
       }
     }
   }
