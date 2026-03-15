@@ -18,7 +18,7 @@ long currRPM;
 
 // parameters to be specified by the user
 int desiredSpeed;
-unsigned long desiredDuration; 
+unsigned long desiredDuration;
 
 unsigned long startTime = 0;
 unsigned long prevTime;

@@ -5,7 +5,6 @@ All the music related utility functions that we used in our V3 centrifuge.
 import numpy as np
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-
 import numpy as np
 
 def get_all_playlist_tracks(sp, playlist_id='6JFBHiU8hdd0xAhZ9ZyQMR'):
