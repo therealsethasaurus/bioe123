@@ -11,9 +11,10 @@ from utils import get_all_playlist_tracks, choose_track, set_volume, get_curr_in
 # connect to spotify API - if this gives issues, remember to clear the cache
 # declare the scope such that the API can change the songs that a user is playing
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id="eed2da3210184052949d749f3621d606",
-                                               client_secret="8a923b7e207748099f89a52141cbaf03",
+                                               client_secret="xxxxxx",
                                                redirect_uri="http://127.0.0.1:8888",
                                                scope = "user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative"))
+ # got a new client secret, since realized this repo was public 🤦, right after uploading everything for the final project submission
 
 # get all the playlist tracks
 tracks = get_all_playlist_tracks(sp)
